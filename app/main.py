@@ -1,17 +1,5 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from app.openai_chat import ask_openai
-
+from fastapi import FastAPI
+from app.api.routes import router
 
 app = FastAPI()
-
-class PromtRequest(BaseModel):
-    message: str
-
-@app.post("/chat")
-async def chat(request: PromtRequest):
-    try:
-        response = ask_openai(request.message)
-        return {"response": response}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+app.include_router(router,  prefix="/api/v1")
