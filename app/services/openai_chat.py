@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from app.utils.openai_tools import calculator_tool
+from app.utils.openai_tools import calculator_tool, weather_tool
 
 # Load environment variables from .env file
 load_dotenv()
@@ -24,6 +24,6 @@ def ask_openai(message):
         model="gpt-3.5-turbo",
         instructions="You are a helpful assistant.",
         input=message,
-        tools=[calculator_tool],
+        tools=[calculator_tool, weather_tool],
     )
     return response
