@@ -52,6 +52,7 @@ async def chat(request: PromptRequest):
                 follow_up_messages.append(msg)
                 args = json.loads(msg["arguments"])
                 result = get_weather_by_location(**args)
+
                 follow_up_messages.append(
                     {
                         "type": "function_call_output",
