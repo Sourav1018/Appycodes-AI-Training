@@ -44,14 +44,12 @@ def get_weather_by_location(location: str):
             "MPI_ESM1_2_XR",
             "NICAM16_8S",
         ],
-        "hourly": "temperature_2m",
+        "daily": "temperature_2m_max",
         "timezone": "auto",
     }
 
     responses = openmeteo.weather_api(url, params=params)
     response = responses[0]
-
-    return {"Output": response}
 
     daily = response.Daily()
     daily_temperature_2m_max = daily.Variables(0).ValuesAsNumpy()
@@ -68,11 +66,16 @@ def get_weather_by_location(location: str):
     daily_data["temperature_2m_max"] = daily_temperature_2m_max
 
     daily_dataframe = pd.DataFrame(data=daily_data)
+    preview = daily_dataframe.to_dict(orient="records")
+
+    # Fix serialization of pd.Timestamp
+    for row in preview:
+        row["date"] = row["date"].isoformat()
 
     return {
         "location": f"{geo['name']}, {geo['country']}",
         "latitude": response.Latitude(),
         "longitude": response.Longitude(),
-        "weather_preview": daily_dataframe,
+        "weather_preview": preview,
         "elevation": response.Elevation(),
     }
