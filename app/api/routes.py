@@ -12,16 +12,22 @@ router = APIRouter()
 
 @router.post("/chat")
 async def chat(request: PromptRequest):
-    follow_up_messages = []
-    follow_up_messages.append({"role": "user", "content": request.message})
+    follow_up_messages = [{"role": "user", "content": request.message}]
     try:
         resp = ask_openai(follow_up_messages)
         data = resp.model_dump() if hasattr(resp, "model_dump") else resp
         output = data.get("output", [])
+
+        tool_results = []
+
         for msg in output:
-            if msg.get("name") == "evaluate_expression":
-                follow_up_messages.append(msg)
-                args = json.loads(msg["arguments"])
+            if msg.get("type") != "function_call":
+                continue
+
+            follow_up_messages.append(msg)
+            args = json.loads(msg["arguments"])
+
+            if msg["name"] == "evaluate_expression":
                 result = evaluate_expression(**args)
                 follow_up_messages.append(
                     {
@@ -30,29 +36,16 @@ async def chat(request: PromptRequest):
                         "output": str(result),
                     }
                 )
-
-                print(f"follow_up_message call output: {follow_up_messages}")
-
-                # Step 4: Get final response from LLM
-                final_resp = ask_openai(follow_up_messages)
-                final_data = (
-                    final_resp.model_dump()
-                    if hasattr(final_resp, "model_dump")
-                    else final_resp
+                tool_results.append(
+                    {
+                        "tool": "evaluate_expression",
+                        "expression": args["expression"],
+                        "result": result,
+                    }
                 )
 
-                return {
-                    "expression": args["expression"],
-                    "result": result,
-                    "final_llm_response": final_resp.output_text,
-                    "raw_model_output": data,
-                    "raw_followup_output": final_data,
-                }
-            elif msg.get("name") == "get_weather":
-                follow_up_messages.append(msg)
-                args = json.loads(msg["arguments"])
+            elif msg["name"] == "get_weather":
                 result = get_weather_by_location(**args)
-
                 follow_up_messages.append(
                     {
                         "type": "function_call_output",
@@ -60,24 +53,32 @@ async def chat(request: PromptRequest):
                         "output": json.dumps(result),
                     }
                 )
-
-                # Final LLM response
-                final_resp = ask_openai(follow_up_messages)
-                final_data = (
-                    final_resp.model_dump()
-                    if hasattr(final_resp, "model_dump")
-                    else final_resp
+                tool_results.append(
+                    {
+                        "tool": "get_weather",
+                        "location": args["location"],
+                        "result": result,
+                    }
                 )
 
-                return {
-                    "location": args["location"],
-                    "weather_data": result,
-                    "final_llm_response": final_resp.output_text,
-                    "raw_model_output": data,
-                    "raw_followup_output": final_data,
-                }
+        if tool_results:
+            final_resp = ask_openai(follow_up_messages)
+            final_data = (
+                final_resp.model_dump()
+                if hasattr(final_resp, "model_dump")
+                else final_resp
+            )
+            return {
+                "final_llm_response": final_resp.output_text,
+                "tool_results": tool_results,
+                "raw_model_output": data,
+                "raw_followup_output": final_data,
+            }
+        else:
+            return {
+                "model_response": resp.output_text,
+                "raw_model_output": data,
+            }
 
-        # fallback if no function call was made
-        return {"model_response": resp.output_text, "raw_model_output": data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
