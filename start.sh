@@ -1,13 +1,36 @@
 #!/bin/bash
 
+set -eu  # Exit on error & undefined variables
 
-# Fail fast if something goes wrong
-set -e
+echo "🔍 Checking virtual environment..."
 
-# Activate the virtual environment
-echo "Activating virtual environment..."
-source venv/Scripts/activate
+# Detect Python command (python3 preferred, fallback to python)
+if command -v python3 &>/dev/null; then
+    PYTHON=python3
+elif command -v python &>/dev/null; then
+    PYTHON=python
+else
+    echo "❌ Python is not installed or not found in PATH!"
+    exit 1
+fi
 
+# Create virtual environment if not found
+if [ ! -d "venv" ]; then
+    echo "❗️Virtual environment not found. Creating one with $PYTHON..."
+    $PYTHON -m venv venv
+    echo "✅ Virtual environment created."
+fi
+
+# Step 2: Activate the virtual environment (cross-platform)
+echo "⚙️ Activating virtual environment..."
+if [ -f "venv/Scripts/activate" ]; then
+    source venv/Scripts/activate
+elif [ -f "venv/bin/activate" ]; then
+    source venv/bin/activate
+else
+    echo "❌ Failed to activate virtual environment!"
+    exit 1
+fi
 # Install dependencies (if requirements.txt exists)
 if [ -f "requirements.txt" ]; then
     echo "Installing required Python packages..."
