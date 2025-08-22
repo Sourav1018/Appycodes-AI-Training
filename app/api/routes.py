@@ -1,5 +1,7 @@
 # app/api/routes.py
-from fastapi import APIRouter
+from fastapi import APIRouter, File, UploadFile
+
+from app.services.upload_service import handle_pdf_upload
 
 router = APIRouter()
 
@@ -10,5 +12,5 @@ async def test_endpoint():
 
 
 @router.post("/upload-pdf")
-async def upload_pdf():
-    return {"message": "PDF uploaded successfully!"}
+async def upload_pdf(file: UploadFile = File(...)):
+    return await handle_pdf_upload(file)
