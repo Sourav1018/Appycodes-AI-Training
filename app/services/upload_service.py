@@ -18,7 +18,9 @@ async def handle_pdf_upload(file: UploadFile):
         supabase = get_supabase_client()
         try:
             response = supabase.storage.from_("pdfs").upload(
-                file.filename, file_bytes, {"content-type": "application/pdf"}
+                "uploads-pdfs/" + file.filename,
+                file_bytes,
+                {"content-type": "application/pdf"},
             )
             return {"message": "Upload successful (Supabase)", "response": response}
         except Exception as e:
